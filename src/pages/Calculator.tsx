@@ -1,9 +1,8 @@
-import { CalculatorIcon } from '@heroicons/react/24/outline';
+import { CalculatorIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { Menu } from '../components/Menu';
 import { useState } from "react";
-import { fontesEnergia } from '../utils/calculationUtils';
+import { fontesEnergia, getEmissaoCorClasse } from '../utils/calculationUtils';
 import { ResultadoCalculo } from '../utils/types/types';
-import { FonteEnergia } from '../utils/types/types';
 
 
 
@@ -60,7 +59,10 @@ export function Calculator() {
                 </div>
 
                 <button
-                    onClick={() => setModalResultados(true)}
+                    onClick={() => {
+                        setModalResultados(true);
+                        calcularEmissoes();
+                      }}
                     className="mt-6 bg-[#4CAF50] hover:bg-[#3d8b40] text-white font-bold py-3 px-6 rounded-md transition-colors"
                 >
                     Calcular Emissões de Carbono
@@ -104,18 +106,107 @@ export function Calculator() {
                     <InputForm
                         consumoEnergia={consumoEnergia}
                         setConsumoEnergia={setConsumoEnergia}
-                        calcularEmissoes={calcular} 
+                        calcularEmissoes={calcular}
                     />
                 </div>
 
                 {modalResultados && (
                     <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
-                        <div className="relative bg-white p-6 rounded-lg shadow-lg w-[300px] ml-16 md:w-[400px] lg:w-[600px]">
+                        <div className="relative bg-white p-6 rounded-lg shadow-lg w-[500px] ml-16 md:w-[400px] lg:w-[600px] max-sm:h-[90%] overflow-y-auto">
                             <h1 className="text-xl text-center mb-6 font-semibold text-gray-700">Resultados</h1>
+
+                            <div className="absolute top-2 right-3">
+                                <XMarkIcon
+                                    className="w-6 cursor-pointer text-gray-600 hover:text-gray-900"
+                                    onClick={() => { setModalResultados(false); setConsumoEnergia({}) }}
+                                />
+                            </div>
+
+                            <section className="bg-white rounded-lg shadow-md border border-[#BDC3C7] p-6">
+                                <h2 className="text-2xl font-bold text-[#2C3E50] mb-6 pb-2 border-b-2 border-[#BDC3C7]">
+                                    Resultados de Emissões de CO₂
+                                </h2>
+
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-left">
+                                        <thead>
+                                            <tr className="bg-[#F8F9FA]">
+                                                <th className="p-3 border-b-2 border-[#BDC3C7]">Fonte de Energia</th>
+                                                <th className="p-3 border-b-2 border-[#BDC3C7]">Consumo (kWh)</th>
+                                                <th className="p-3 border-b-2 border-[#BDC3C7]">Emissões (kg CO₂eq)</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {resultados.map((resultado, index) => (
+                                                <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                                                    <td className="p-3 border-b border-[#BDC3C7]">{resultado.fonte}</td>
+                                                    <td className="p-3 border-b border-[#BDC3C7]">{resultado.consumo.toLocaleString()}</td>
+                                                    <td className="p-3 border-b border-[#BDC3C7]">
+                                                        <span className={getEmissaoCorClasse(resultado.emissoes)}>
+                                                            {resultado.emissoes.toFixed(2)}
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                        <tfoot>
+                                            <tr className="bg-[#F4C542] font-bold">
+                                                <td className="p-3" colSpan={2}>Emissão Total de CO₂</td>
+                                                <td className="p-3">{emissaoTotal.toFixed(2)} kg CO₂eq</td>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </div>
+
+                                <div className="mt-8">
+                                    <h3 className="text-xl font-semibold mb-4 text-[#2C3E50]">Distribuição de Emissões</h3>
+                                    <div className="w-full h-8 bg-[#BDC3C7] rounded-full overflow-hidden flex">
+                                        {resultados.map((resultado, index) => {
+                                            const percentual = (resultado.emissoes / emissaoTotal) * 100;
+                                            if (percentual < 1 || isNaN(percentual)) return null;
+
+                                            return (
+                                                <div
+                                                    key={index}
+                                                    style={{ width: `${percentual}%` }}
+                                                    className={`h-full ${index % 3 === 0 ? 'bg-[#4CAF50]' : index % 3 === 1 ? 'bg-[#F4C542]' : 'bg-[#2C3E50]'}`}
+                                                    title={`${resultado.fonte}: ${percentual.toFixed(1)}%`}
+                                                ></div>
+                                            );
+                                        })}
+                                    </div>
+                                    <div className="flex flex-wrap mt-2">
+                                        {resultados.map((resultado, index) => {
+                                            const percentual = (resultado.emissoes / emissaoTotal) * 100;
+                                            if (percentual < 1 || isNaN(percentual)) return null;
+
+                                            return (
+                                                <div key={index} className="flex items-center mr-4 mb-2">
+                                                    <div
+                                                        className={`w-4 h-4 rounded-sm mr-1 ${index % 3 === 0 ? 'bg-[#4CAF50]' : index % 3 === 1 ? 'bg-[#F4C542]' : 'bg-[#2C3E50]'}`}
+                                                    ></div>
+                                                    <span className="text-sm">{resultado.fonte}: {percentual.toFixed(1)}%</span>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+
+                                {/* Dicas e Recomendações */}
+                                <div className="mt-8 p-4 bg-[#F8F9FA] rounded-lg border-l-4 border-[#4CAF50]">
+                                    <h3 className="font-bold text-lg text-[#2C3E50] mb-2">Dicas para Reduzir Emissões:</h3>
+                                    <ul className="list-disc pl-5 space-y-1">
+                                        <li>Priorize fontes de energia renováveis como solar, eólica e hidrelétrica</li>
+                                        <li>Reduza o consumo de energia proveniente de combustíveis fósseis</li>
+                                        <li>Implemente medidas de eficiência energética</li>
+                                        <li>Considere a instalação de painéis solares ou outras fontes renováveis</li>
+                                    </ul>
+                                </div>
+                            </section>
                         </div>
                     </div>
 
-                ) }
+                )}
             </div>
         </div>
     );
